@@ -34,7 +34,10 @@ web:
   port: 80
 
 ingress:
-  enabled: true
+  # 公网入口走基建仓库（gitops）的 istio 边缘网关：Gateway listener
+  # https-atoms + HTTPRoute atoms-demo → 本 chart 的 web service。
+  # 集群内 nginx ingress 不对外，保持关闭（避免重复签发证书）。
+  enabled: false
   className: nginx
   host: atoms.ss-vip.cn
   # cert-manager ClusterIssuer 名称
