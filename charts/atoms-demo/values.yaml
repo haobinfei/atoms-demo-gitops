@@ -7,11 +7,11 @@ images:
   server:
     registry: registry.cn-hangzhou.aliyuncs.com
     repository: ss-vip/atoms-demo-server
-    tag: "0.1.6"
+    tag: "0.1.7"
   web:
     registry: registry.cn-hangzhou.aliyuncs.com
     repository: ss-vip/atoms-demo-web
-    tag: "0.1.6"
+    tag: "0.1.7"
 
 server:
   replicas: 1
