@@ -1,15 +1,16 @@
-# 镜像 tag 由应用仓库的发布流程回写（gitops 仓库收到新 commit 后
-# Argo CD 自动同步）；本地 helm template 验证时也改这里。
+# 镜像由应用仓库的发布流程构建并推送至阿里云 ACR（registry.cn-hangzhou.aliyuncs.com/ss-vip），
+# tag 由发布流程回写（gitops 仓库收到新 commit 后 Argo CD 自动同步）；
+# 本地 helm template 验证时也改这里。
 images:
   pullPolicy: IfNotPresent
   pullSecrets: []
   server:
-    registry: ghcr.io
-    repository: haobinfei/atoms-demo-server
+    registry: registry.cn-hangzhou.aliyuncs.com
+    repository: ss-vip/atoms-demo-server
     tag: "0.1.0"
   web:
-    registry: ghcr.io
-    repository: haobinfei/atoms-demo-web
+    registry: registry.cn-hangzhou.aliyuncs.com
+    repository: ss-vip/atoms-demo-web
     tag: "0.1.0"
 
 server:

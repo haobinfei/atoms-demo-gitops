@@ -18,7 +18,7 @@ Helm chart + Argo CD Application，子域 `atoms.ss-vip.cn`，cert-manager TLS�
 
 ```
 Atoms-Demo 仓库发版
-   → 构建 server/web 镜像并推送 ghcr.io
+   → self-hosted runner（ARC）构建 server/web 镜像并推送阿里云 ACR（ss-vip 命名空间）
    → 发布流程回写本仓库 charts/atoms-demo/values.yaml 的 images.*.tag
    → Argo CD 检测到 git 变化（syncPolicy.automated + selfHeal）
    → 自动 sync，新镜像滚动上线
@@ -34,7 +34,8 @@ kubectl apply -f argocd/application.yaml   # 在已装 Argo CD 的集群里
 
 - Argo CD（namespace `argocd`）
 - ingress-nginx + `letsencrypt-prod` ClusterIssuer（cert-manager）
-- 可拉取 ghcr.io 镜像（公开镜像则无需 imagePullSecrets）
+- 可拉取 `registry.cn-hangzhou.aliyuncs.com/ss-vip` 镜像（与 AuthSphere 同一
+  ACR 命名空间，集群节点已配置拉取权限，无需 imagePullSecrets）
 
 ## 本地验证（无集群）
 
