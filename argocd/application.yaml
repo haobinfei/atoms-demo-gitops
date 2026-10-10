@@ -1,6 +1,18 @@
 # Argo CD Application：指向本 gitops 仓库的 Helm chart。
 # syncPolicy.automated + selfHeal —— 任何推送到本仓库的改动（例如
 # 发布流程回写的新镜像 tag）都会被自动拉起，无需手动 sync。
+#
+# 注意 repoURL 必须用 ssh（git@github.com）：集群出网到 github.com 的
+# https 被断（runner 走 Mac socat 中继，Argo repo-server 走 ssh）。
+# 认证靠 argocd 命名空间的 repo-creds Secret（管理员手工创建，私钥不入库）：
+#   kubectl create secret generic atoms-demo-gitops-ssh -n argocd \
+#     --from-literal=type=git \
+#     --from-literal=url=git@github.com/haobinfei/atoms-demo-gitops.git \
+#     --from-file=sshPrivateKey=<只读 deploy key 私钥>
+#   kubectl label secret atoms-demo-gitops-ssh -n argocd \
+#     argocd.argoproj.io/secret-type=repository
+# 对应公钥需加为本仓库的只读 deploy key（GitHub 不允许同一 key 挂多仓库，
+# 不能复用 gitops 仓库那把）。
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -9,7 +21,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/haobinfei/atoms-demo-gitops.git
+    repoURL: git@github.com:haobinfei/atoms-demo-gitops.git
     targetRevision: HEAD
     path: charts/atoms-demo
   destination:
