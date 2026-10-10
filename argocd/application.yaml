@@ -1,0 +1,23 @@
+# Argo CD Application：指向本 gitops 仓库的 Helm chart。
+# syncPolicy.automated + selfHeal —— 任何推送到本仓库的改动（例如
+# 发布流程回写的新镜像 tag）都会被自动拉起，无需手动 sync。
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: atoms-demo
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/haobinfei/atoms-demo-gitops.git
+    targetRevision: HEAD
+    path: charts/atoms-demo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: atoms-demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

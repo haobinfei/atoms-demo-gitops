@@ -1,0 +1,41 @@
+# 镜像 tag 由应用仓库的发布流程回写（gitops 仓库收到新 commit 后
+# Argo CD 自动同步）；本地 helm template 验证时也改这里。
+images:
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+  server:
+    registry: ghcr.io
+    repository: haobinfei/atoms-demo-server
+    tag: "0.1.0"
+  web:
+    registry: ghcr.io
+    repository: haobinfei/atoms-demo-web
+    tag: "0.1.0"
+
+server:
+  replicas: 1
+  port: 4173
+  # 线上必填（AUTH_MODE=oidc 时）。生产建议改为引用外部 Secret，
+  # 不要把真实密钥提交进本仓库。
+  env:
+    AUTH_MODE: oidc
+    OIDC_ISSUER: https://auth.ss-vip.cn
+    OIDC_CLIENT_ID: ""
+    OIDC_CLIENT_SECRET: ""
+    OIDC_REDIRECT_URL: https://atoms.ss-vip.cn/api/auth/callback
+    DEEPSEEK_API_KEY: ""
+    LOCAL_LLM_BASE_URL: ""
+  workspace:
+    size: 2Gi
+    storageClass: ""
+
+web:
+  replicas: 1
+  port: 80
+
+ingress:
+  enabled: true
+  className: nginx
+  host: atoms.ss-vip.cn
+  # cert-manager ClusterIssuer 名称
+  certIssuer: letsencrypt-prod

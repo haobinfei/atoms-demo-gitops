@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "atoms-demo.fullname" . }}-workspace
+  labels:
+    {{- include "atoms-demo.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ .Values.server.workspace.size }}
+  {{- if .Values.server.workspace.storageClass }}
+  storageClassName: {{ .Values.server.workspace.storageClass | quote }}
+  {{- end }}

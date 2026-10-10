@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "atoms-demo.fullname" . }}-web
+  labels:
+    {{- include "atoms-demo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  replicas: {{ .Values.web.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: web
+    spec:
+      {{- with .Values.images.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: web
+          image: {{ include "atoms-demo.webImage" . }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          env:
+            # nginx 启动前 envsubst 把模板里的 ${ATMOS_SERVER} 替换为
+            # 集群内 service DNS（web 反代 /api、/app、/pay 到 server）。
+            - name: ATMOS_SERVER
+              value: "{{ include "atoms-demo.fullname" . }}-server:{{ .Values.server.port }}"
+          ports:
+            - name: http
+              containerPort: {{ .Values.web.port }}

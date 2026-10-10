@@ -1,0 +1,31 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "atoms-demo.fullname" . }}
+  labels:
+    {{- include "atoms-demo.labels" . | nindent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.certIssuer | quote }}
+    # SSE 事件流经 ingress 时不能缓冲
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ include "atoms-demo.fullname" . }}-tls
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          # 全部流量进 web(nginx)；web 再按路径反代 /api、/app、/pay
+          # 到 server service，与本地开发/compose 拓扑一致。
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "atoms-demo.fullname" . }}-web
+                port:
+                  number: {{ .Values.web.port }}
+{{- end }}

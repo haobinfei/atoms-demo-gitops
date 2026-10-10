@@ -1,0 +1,6 @@
+apiVersion: v2
+name: atoms-demo
+description: Atoms Demo — AI 应用生成平台（server + web + ingress）
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
