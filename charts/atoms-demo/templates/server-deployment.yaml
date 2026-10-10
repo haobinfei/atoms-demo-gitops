@@ -39,6 +39,20 @@ spec:
             - name: {{ $name }}
               value: {{ $value | quote }}
             {{- end }}
+            # 敏感配置（OIDC client secret、LLM API key 等）不走 git：
+            # 集群里手工创建 Secret（kubectl create secret generic atoms-demo-env
+            # --from-literal=OIDC_CLIENT_ID=... --from-literal=OIDC_CLIENT_SECRET=...
+            # --from-literal=DEEPSEEK_API_KEY=...），此处按 key 同名引用。
+            {{- if .Values.server.secretsFrom }}
+            {{- range $key := list "OIDC_CLIENT_ID" "OIDC_CLIENT_SECRET" "DEEPSEEK_API_KEY" "LOCAL_LLM_BASE_URL" }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.server.secretsFrom | quote }}
+                  key: {{ $key }}
+                  optional: true
+            {{- end }}
+            {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.server.port }}

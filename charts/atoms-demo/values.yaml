@@ -16,16 +16,15 @@ images:
 server:
   replicas: 1
   port: 4173
-  # 线上必填（AUTH_MODE=oidc 时）。生产建议改为引用外部 Secret，
-  # 不要把真实密钥提交进本仓库。
+  # 敏感配置（OIDC_CLIENT_ID/SECRET、DEEPSEEK_API_KEY 等）引用集群内
+  # 手工创建的 Secret（不入库）：kubectl create secret generic atoms-demo-env
+  # -n atoms-demo --from-literal=OIDC_CLIENT_ID=... ...
+  # 留空则只使用下方 env 的明文值（适合本地 helm template 验证）。
+  secretsFrom: "atoms-demo-env"
   env:
     AUTH_MODE: oidc
     OIDC_ISSUER: https://auth.ss-vip.cn
-    OIDC_CLIENT_ID: ""
-    OIDC_CLIENT_SECRET: ""
     OIDC_REDIRECT_URL: https://atoms.ss-vip.cn/api/auth/callback
-    DEEPSEEK_API_KEY: ""
-    LOCAL_LLM_BASE_URL: ""
   workspace:
     size: 2Gi
     storageClass: ""
