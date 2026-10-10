@@ -17,12 +17,17 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: server
     spec:
+      securityContext:
+        # distroless nonroot (UID 65532) 需要写 workspace 卷
+        fsGroup: 65532
       {{- with .Values.images.pullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
         - name: server
+          securityContext:
+            runAsNonRoot: true
           image: {{ include "atoms-demo.serverImage" . }}
           imagePullPolicy: {{ .Values.images.pullPolicy }}
           env:
@@ -37,6 +42,24 @@ spec:
           ports:
             - name: http
               containerPort: {{ .Values.server.port }}
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
           volumeMounts:
             - name: workspace
               mountPath: /workspace

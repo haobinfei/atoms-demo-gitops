@@ -7,8 +7,11 @@ metadata:
     {{- include "atoms-demo.labels" . | nindent 4 }}
   annotations:
     cert-manager.io/cluster-issuer: {{ .Values.ingress.certIssuer | quote }}
-    # SSE 事件流经 ingress 时不能缓冲
+    # SSE 事件流：不能缓冲，且静默期可能远超 nginx 默认的 60s 读超时
+    #（长 LLM 回合），一并放宽。
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   tls:
