@@ -44,7 +44,7 @@ spec:
             # --from-literal=OIDC_CLIENT_ID=... --from-literal=OIDC_CLIENT_SECRET=...
             # --from-literal=DEEPSEEK_API_KEY=...），此处按 key 同名引用。
             {{- if .Values.server.secretsFrom }}
-            {{- range $key := list "OIDC_CLIENT_ID" "OIDC_CLIENT_SECRET" "DEEPSEEK_API_KEY" "LOCAL_LLM_BASE_URL" }}
+            {{- range $key := list "OIDC_CLIENT_ID" "OIDC_CLIENT_SECRET" "DEEPSEEK_API_KEY" "KIMI_API_KEY" "LOCAL_LLM_BASE_URL" }}
             - name: {{ $key }}
               valueFrom:
                 secretKeyRef:
