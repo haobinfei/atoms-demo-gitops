@@ -44,6 +44,16 @@ spec:
                   name: atoms-middleware
                   key: DATABASE_DSN
                   optional: true
+            # Redis Streams 同时承担实时事件扇出与任务队列（T4/T5/T6/T8）。
+            # 与 DATABASE_DSN 同源，确保所有副本共享同一队列与广播通道。
+            {{- range $key := list "REDIS_HOST" "REDIS_PORT" "REDIS_USERNAME" "REDIS_PASSWORD" }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  name: atoms-middleware
+                  key: {{ $key }}
+                  optional: true
+            {{- end }}
             {{- range $name, $value := .Values.server.env }}
             - name: {{ $name }}
               value: {{ $value | quote }}
