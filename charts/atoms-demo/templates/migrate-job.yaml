@@ -1,0 +1,75 @@
+# 数据库迁移 Job：helm post-install/post-upgrade hook，每次 sync 后执行。
+# 迁移文件位于 chart 内 db/migrations/*.sql（仓库版本化，随 commit 走），
+# 按文件名排序、schema_migrations 表记账、单事务应用（含记账插入），
+# 重复 upgrade 只补应用新文件，失败时非零退出（ON_ERROR_STOP=1）。
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "atoms-demo.fullname" . }}-migrations
+  labels:
+    {{- include "atoms-demo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+data:
+{{- range $path, $content := .Files.Glob "db/migrations/*.sql" }}
+  {{ base $path }}: |
+{{ $content | toString | indent 4 }}
+{{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "atoms-demo.fullname" . }}-migrate
+  labels:
+    {{- include "atoms-demo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: {{ .Values.migrate.image }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DATABASE_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: atoms-middleware
+                  key: DATABASE_DSN
+          volumeMounts:
+            - name: migrations
+              mountPath: /migrations
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              psql "$DATABASE_DSN" -v ON_ERROR_STOP=1 <<'SQL'
+              CREATE TABLE IF NOT EXISTS schema_migrations (
+                  version    TEXT PRIMARY KEY,
+                  applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+              );
+              SQL
+              for f in /migrations/*.sql; do
+                ver="$(basename "$f" .sql)"
+                if [ "$(psql "$DATABASE_DSN" -tAc "SELECT 1 FROM schema_migrations WHERE version = '$ver'")" = "1" ]; then
+                  echo "skip $ver (already applied)"
+                  continue
+                fi
+                echo "apply $ver"
+                # 迁移本体 + 记账插入合并为单事务：迁移失败不会留半张表，也不会记账。
+                { cat "$f"; echo "INSERT INTO schema_migrations (version) VALUES ('$ver');"; } \
+                  | psql "$DATABASE_DSN" -v ON_ERROR_STOP=1 -1 -f -
+              done
+              echo "migrations up to date"
+      volumes:
+        - name: migrations
+          configMap:
+            name: {{ include "atoms-demo.fullname" . }}-migrations

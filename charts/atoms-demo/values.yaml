@@ -33,6 +33,11 @@ web:
   replicas: 1
   port: 80
 
+migrate:
+  # 迁移 Job 镜像：与共享 gitops（68-postgresql）init Job 同镜像，
+  # 保证 ACR 命名空间 ss-vip 内可拉取且自带 psql。
+  image: registry.cn-hangzhou.aliyuncs.com/ss-vip/postgresql:snap20260910
+
 ingress:
   # 公网入口走基建仓库（gitops）的 istio 边缘网关：Gateway listener
   # https-atoms + HTTPRoute atoms-demo → 本 chart 的 web service。
