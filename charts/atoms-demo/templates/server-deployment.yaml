@@ -35,6 +35,15 @@ spec:
               value: {{ .Values.server.port | quote }}
             - name: WORKSPACE_DIR
               value: /workspace
+            # 会话元数据走共享 Postgres（atoms 库，T3 起）：
+            # DATABASE_DSN 由共享 gitops middleware 的 atoms-middleware Secret 提供；
+            # 未配置时 server 自动回退文件存储（本地开发/测试）。
+            - name: DATABASE_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: atoms-middleware
+                  key: DATABASE_DSN
+                  optional: true
             {{- range $name, $value := .Values.server.env }}
             - name: {{ $name }}
               value: {{ $value | quote }}
@@ -44,7 +53,7 @@ spec:
             # --from-literal=OIDC_CLIENT_ID=... --from-literal=OIDC_CLIENT_SECRET=...
             # --from-literal=DEEPSEEK_API_KEY=...），此处按 key 同名引用。
             {{- if .Values.server.secretsFrom }}
-            {{- range $key := list "OIDC_CLIENT_ID" "OIDC_CLIENT_SECRET" "DEEPSEEK_API_KEY" "KIMI_API_KEY" "LOCAL_LLM_BASE_URL" }}
+            {{- range $key := list "OIDC_CLIENT_ID" "OIDC_CLIENT_SECRET" "DEEPSEEK_API_KEY" "KIMI_API_KEY" "LOCAL_LLM_BASE_URL" "COS_BUCKET" "COS_ENDPOINT" "COS_SECRET_ID" "COS_SECRET_KEY" "COS_SESSION_TOKEN" }}
             - name: {{ $key }}
               valueFrom:
                 secretKeyRef:
