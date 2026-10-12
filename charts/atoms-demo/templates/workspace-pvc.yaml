@@ -12,3 +12,18 @@ spec:
   {{- if .Values.server.workspace.storageClass }}
   storageClassName: {{ .Values.server.workspace.storageClass | quote }}
   {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.server.workspace.identityClaim }}
+  labels:
+    {{- include "atoms-demo.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ .Values.server.workspace.size }}
+  {{- if .Values.server.workspace.storageClass }}
+  storageClassName: {{ .Values.server.workspace.storageClass | quote }}
+  {{- end }}
