@@ -1,0 +1,29 @@
+{{- if .Values.monitoring.serviceMonitor.enabled }}
+# 让平台的 Prometheus 抓取 server 的 /metrics（ADR-0018）。
+#
+# 平台 Prometheus 的选择器是：serviceMonitorSelector = release=monitoring，
+# serviceMonitorNamespaceSelector 为空（= 全命名空间）。因此本对象必须带
+# release: monitoring 标签，否则抓不到——这是最常见的「指标端点通了但没数据」。
+#
+# /metrics 与业务路由同端口（4173），Service 的端口名就是 http。
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "atoms-demo.fullname" . }}-server
+  labels:
+    {{- include "atoms-demo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+    release: monitoring
+    {{- with .Values.monitoring.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.monitoring.serviceMonitor.interval | quote }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: server
+{{- end }}

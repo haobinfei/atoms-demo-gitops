@@ -1,0 +1,241 @@
+{
+  "title": "Atoms Demo · 服务总览",
+  "uid": "atoms-demo-service",
+  "tags": ["atoms-demo"],
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "description": "Atoms Demo Go 服务的采集指标总览。数据源是平台默认的 VictoriaMetrics（Prometheus remoteWrite 入口）。指标契约见应用仓库 docs/adr/0018。",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "请求速率（按路由）",
+      "description": "http.server.request.duration 的 _count 即请求数；路由标签取自路由模板，基数有界。",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (http_route) (rate(http_server_request_duration_seconds_count{http_route!=\"unmatched\"}[5m]))",
+          "legendFormat": "{{http_route}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "请求耗时 P95（按路由）",
+      "description": "事件流（SSE）路由被排除在耗时统计之外，长连接只结束于客户端断开。",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "s" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{http_route}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "5xx 比例",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.01 },
+              { "color": "red", "value": 0.05 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[5m])) / clamp_min(sum(rate(http_server_request_duration_seconds_count[5m])), 0.0000001)",
+          "legendFormat": "5xx"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "队列积压",
+      "description": "lag 涨 = Worker 不够或吞吐掉了；pending 涨 = 执行慢或 Worker 在崩（at-least-once 堆积）。容量默认是 QUEUE_WORKERS×4。",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "targets": [
+        { "refId": "A", "expr": "atoms_job_queue_lag{queue=\"jobs\"}", "legendFormat": "lag" },
+        { "refId": "B", "expr": "atoms_job_queue_pending{queue=\"jobs\"}", "legendFormat": "pending" },
+        { "refId": "C", "expr": "atoms_job_queue_capacity{queue=\"jobs\"}", "legendFormat": "capacity" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "任务吞吐（按种类）",
+      "description": "入队与确认分开看：两者背离说明有任务在重投。",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (kind) (rate(atoms_job_enqueued_total[5m]))", "legendFormat": "enqueued {{kind}}" },
+        { "refId": "B", "expr": "sum by (kind) (rate(atoms_job_acknowledged_total[5m]))", "legendFormat": "acked {{kind}}" },
+        { "refId": "C", "expr": "sum by (kind, reason) (rate(atoms_job_redelivered_total[5m]))", "legendFormat": "redelivered {{kind}}/{{reason}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "任务耗时 P50 / P95",
+      "description": "生成型任务以分钟计，分桶是按这个量级配的。",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.5, sum by (le) (rate(atoms_job_duration_seconds_bucket[15m])))", "legendFormat": "P50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(atoms_job_duration_seconds_bucket[15m])))", "legendFormat": "P95" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "回合结果",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (status) (rate(atoms_turn_finished_total[15m]))", "legendFormat": "{{status}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "回合失败阶段",
+      "description": "把「模型不可用」和「生成的代码编译不过」分开——两者的处置完全不同。",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (stage) (rate(atoms_turn_stage_failed_total[30m]))", "legendFormat": "{{stage}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "任务被跳过（重复投递等）",
+      "description": "at-least-once 的正常空转。duplicate / lease_lost 长期偏高说明重复投递失控。",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (reason) (rate(atoms_job_skipped_total[15m]))", "legendFormat": "{{reason}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "生成引擎调用（按结果）",
+      "description": "invalid = 调用成功但产物不可用（模型幻觉/漏文件），与网络或配额错误分开。",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 24 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (provider, outcome) (rate(atoms_provider_attempts_total[15m]))", "legendFormat": "{{provider}} {{outcome}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "模型链降级",
+      "description": "不涨说明主模型健康；涨到持续非零就是模型链在减员。",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 24 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (provider) (rate(atoms_provider_fallback_total[15m]))", "legendFormat": "{{provider}} → 下一环" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "构建结果与耗时",
+      "description": "css_stubs 是构建自愈补出的空文件；selfheal_exhausted 是补桩也没救回来的次数。",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 24 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (outcome) (rate(atoms_build_runs_total[15m]))", "legendFormat": "runs {{outcome}}" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(atoms_build_duration_seconds_bucket[15m])))", "legendFormat": "P95 耗时(s)" },
+        { "refId": "C", "expr": "rate(atoms_build_css_stubs_total[15m])", "legendFormat": "补空 CSS" },
+        { "refId": "D", "expr": "rate(atoms_build_selfheal_exhausted_total[15m])", "legendFormat": "自愈用尽" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "崩溃恢复",
+      "description": "requeued 是 sweeper 重新入队的量；job_recovered 是真正被 Worker 捡起重跑的量。两者背离说明恢复请求没跑起来。",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 32 },
+      "targets": [
+        { "refId": "A", "expr": "rate(atoms_recovery_requeued_total[30m])", "legendFormat": "重新入队 {{kind}}" },
+        { "refId": "B", "expr": "rate(atoms_job_recovered_total[30m])", "legendFormat": "实际重跑 {{kind}}" },
+        { "refId": "C", "expr": "rate(atoms_recovery_sweeps_total{outcome=\"failed\"}[30m])", "legendFormat": "扫描失败" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "实时性降级信号",
+      "description": "SSE 回放次数与 Redis 扇出失败：一涨就说明客户端开始靠 Postgres 回放兜底（实时性变差，但事件不丢）。",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 32 },
+      "targets": [
+        { "refId": "A", "expr": "rate(atoms_sse_replays_total[5m])", "legendFormat": "SSE 回放" },
+        { "refId": "B", "expr": "rate(atoms_event_publish_failed_total[5m])", "legendFormat": "Redis 扇出失败" },
+        { "refId": "C", "expr": "rate(atoms_sse_subscribe_failed_total[5m])", "legendFormat": "订阅失败" },
+        { "refId": "D", "expr": "atoms_sse_clients_active", "legendFormat": "活跃 SSE 连接" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "连接池",
+      "description": "打满连接池是「查询慢」和「服务挂了」之间最常见的一步。empty_acquires 持续上涨就是排队的证据。",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 32 },
+      "targets": [
+        { "refId": "A", "expr": "atoms_db_pool_connections{state=\"used\"}", "legendFormat": "PG used {{pool}}" },
+        { "refId": "B", "expr": "atoms_db_pool_max_connections", "legendFormat": "PG max {{pool}}" },
+        { "refId": "C", "expr": "rate(atoms_db_pool_empty_acquires_total[5m])", "legendFormat": "PG 空池等待 {{pool}}" },
+        { "refId": "D", "expr": "atoms_redis_pool_connections{state=\"used\"}", "legendFormat": "Redis used {{pool}}" },
+        { "refId": "E", "expr": "rate(atoms_redis_pool_timeouts_total[5m])", "legendFormat": "Redis 等待超时" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "业务计数",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 40 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (kind) (rate(atoms_sessions_created_total[30m]))", "legendFormat": "新建会话 {{kind}}" },
+        { "refId": "B", "expr": "sum by (outcome) (rate(atoms_publishes_total[30m]))", "legendFormat": "发布 {{outcome}}" },
+        { "refId": "C", "expr": "sum by (outcome) (rate(atoms_pay_orders_total[30m]))", "legendFormat": "模拟订单 {{outcome}}" },
+        { "refId": "D", "expr": "sum by (scope, outcome) (rate(atoms_auth_rate_limited_total[30m]))", "legendFormat": "限流 {{scope}}/{{outcome}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "产物存储操作",
+      "description": "COS 是唯一出网依赖；这里的错误率会先于失败回合显形。",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 40 },
+      "targets": [
+        { "refId": "A", "expr": "sum by (op, outcome) (rate(atoms_artifact_operations_total[15m]))", "legendFormat": "{{op}} {{outcome}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Go 运行时",
+      "datasource": { "type": "prometheus", "uid": "victoriametrics" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 40 },
+      "targets": [
+        { "refId": "A", "expr": "go_goroutines", "legendFormat": "goroutines" },
+        { "refId": "B", "expr": "rate(go_gc_duration_seconds_count[5m])", "legendFormat": "GC 次数/s" },
+        { "refId": "C", "expr": "go_memstats_heap_inuse_bytes", "legendFormat": "堆在用 (B)" }
+      ]
+    }
+  ]
+}

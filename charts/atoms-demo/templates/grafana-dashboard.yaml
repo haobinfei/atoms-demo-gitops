@@ -1,0 +1,17 @@
+{{- if .Values.monitoring.dashboard.enabled }}
+# 服务总览看板。Grafana 的 dashboard sidecar 会扫描所有命名空间里带
+# grafana_dashboard=1 标签的 ConfigMap 并自动加载（先例：middleware-postgresql-dashboard）。
+#
+# 看板里的查询针对 Grafana 的默认数据源 VictoriaMetrics（uid: victoriametrics）：
+# 平台 Prometheus 通过 remoteWrite 把抓到的指标写进 vminsert，所以看板读的是 VM。
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "atoms-demo.fullname" . }}-dashboard
+  labels:
+    {{- include "atoms-demo.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  atoms-demo.json: |-
+    {{- .Files.Get "dashboards/atoms-demo.json" | nindent 4 }}
+{{- end }}
