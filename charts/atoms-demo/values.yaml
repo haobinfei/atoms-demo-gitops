@@ -34,6 +34,20 @@ web:
   replicas: 1
   port: 80
 
+# 监控采集（server 无条件暴露 /metrics，这里只控制「谁来抓」与看板下发）。
+monitoring:
+  # Prometheus Operator 的 ServiceMonitor。集群已装 kube-prometheus-stack，
+  # 其 serviceMonitorSelector 是 release=monitoring（ns 不限），模板里已带该标签。
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    # 追加到 ServiceMonitor 的标签（匹配其他 Prometheus 实例时用）
+    labels: {}
+  # Grafana 看板：以 grafana_dashboard=1 的 ConfigMap 下发，sidecar 自动加载。
+  # 看板查询针对默认数据源 VictoriaMetrics（uid: victoriametrics）。
+  dashboard:
+    enabled: true
+
 migrate:
   # 迁移 Job 镜像：与共享 gitops（68-postgresql）init Job 同镜像，
   # 保证 ACR 命名空间 ss-vip 内可拉取且自带 psql。
