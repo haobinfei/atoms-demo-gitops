@@ -114,7 +114,7 @@
     },
     {
       "type": "timeseries",
-      "title": "回合失败阶段",
+      "title": "回合失败阶段（空=没有失败）",
       "description": "把「模型不可用」和「生成的代码编译不过」分开——两者的处置完全不同。",
       "datasource": { "type": "prometheus", "uid": "victoriametrics" },
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 },
@@ -124,7 +124,7 @@
     },
     {
       "type": "timeseries",
-      "title": "任务被跳过（重复投递等）",
+      "title": "任务被跳过（空=没有重复投递）",
       "description": "at-least-once 的正常空转。duplicate / lease_lost 长期偏高说明重复投递失控。",
       "datasource": { "type": "prometheus", "uid": "victoriametrics" },
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
@@ -135,7 +135,7 @@
     {
       "type": "timeseries",
       "title": "生成引擎调用（按结果）",
-      "description": "invalid = 调用成功但产物不可用（模型幻觉/漏文件），与网络或配额错误分开。",
+      "description": "回合、竞赛参赛者、评审打分三条路共用这一组指标（埋点落在 Provider 实例上）。invalid=调用成功但产物不可用（模型幻觉/漏文件），与网络或配额错误分开。",
       "datasource": { "type": "prometheus", "uid": "victoriametrics" },
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 24 },
       "targets": [
@@ -144,7 +144,7 @@
     },
     {
       "type": "timeseries",
-      "title": "模型链降级",
+      "title": "模型链降级（空=主模型健康）",
       "description": "不涨说明主模型健康；涨到持续非零就是模型链在减员。",
       "datasource": { "type": "prometheus", "uid": "victoriametrics" },
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 24 },
@@ -167,7 +167,7 @@
     },
     {
       "type": "timeseries",
-      "title": "崩溃恢复",
+      "title": "崩溃恢复（空=没有崩溃重跑）",
       "description": "requeued 是 sweeper 重新入队的量；job_recovered 是真正被 Worker 捡起重跑的量。两者背离说明恢复请求没跑起来。",
       "datasource": { "type": "prometheus", "uid": "victoriametrics" },
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 32 },
@@ -179,7 +179,7 @@
     },
     {
       "type": "timeseries",
-      "title": "实时性降级信号",
+      "title": "实时性降级信号（空=未降级）",
       "description": "SSE 回放次数与 Redis 扇出失败：一涨就说明客户端开始靠 Postgres 回放兜底（实时性变差，但事件不丢）。",
       "datasource": { "type": "prometheus", "uid": "victoriametrics" },
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 32 },
